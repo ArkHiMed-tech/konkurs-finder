@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import csv
 import sys
-from PyQt6 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore
  
 HOST = 'https://xn--80aayamnhpkade1j.xn--p1ai/'
 URL = 'https://xn--80aayamnhpkade1j.xn--p1ai/events?date=2021-2022'
