@@ -3,37 +3,44 @@ import requests
 import csv
 import sys
 from PyQt6 import QtWidgets, QtCore
- 
-HOST = 'https://xn--80aayamnhpkade1j.xn--p1ai/'
+
+HOST = 'https://xn--80aayamnhpkade1j.xn--p1ai/'  # Объявление констант для запросов на сайт
 URL = 'https://xn--80aayamnhpkade1j.xn--p1ai/events?date=2021-2022'
 HEADER = {
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36'
 }
 
-sl = {
+sl = {  # cловарь для считывания команд из терминала
     'title': ['название', 'заголовок', 'н', 'титл', 'title'],
     'theme': ['тема', 'раздел', 'т', 'тематика', 'предмет', 'отрасль', 'theme'],
     'organizator': ['организатор', 'устроитель', 'ор', 'organizator'],
     'description': ['описание', 'оп', 'description'],
     'link': ['ссылка', 'с', 'линк', 'link'],
-    'all': ['везде', 'все', 'всюду', 'в', 'all'], 
+    'all': ['везде', 'все', 'всюду', 'в', 'all'],
     'terminal': ['in terminal', 'terminal', 'в терминал', 'терминал', 'тер'],
     'file': ['in file', 'file', 'в файл', 'файл', 'ф']
-    }
+}
+
 
 def get_html(url, params=''):
     responce = requests.get(url, headers=HEADER, params=params)
-    return responce
+    return responce 
 
-def get_content(html):
+
+def get_content(html):   # Парсинг данных
     soup = BeautifulSoup(html.text, 'html.parser')
     items = soup.find_all('div', class_='toggles-b js-toggle-row')
     contests = []
-    for i,item in enumerate(items):
-        organ = item.find('div', class_='card card-body').find('div', style='margin-bottom: 5px;').text.partition('Организаторы')[2].strip() if item.find('div', class_='card card-body').find('div', style='margin-bottom: 5px;') else '-'
-        descr = item.find('div', class_='card card-body').text.partition('Профили')[2].replace('Cайт мероприятия', '').strip() if item.find('div', class_='card card-body').find('h4') else '-'
-        lnk = item.find('div', class_='card-body').find('a').get('href') if item.find('div', class_='card-body').find('a') else '-'
+    for i, item in enumerate(items):
+        organ = item.find('div', class_='card card-body').find('div', style='margin-bottom: 5px;').text.partition(
+            'Организаторы')[2].strip() if item.find('div', class_='card card-body').find('div',
+                                                                                         style='margin-bottom: 5px;') else '-'
+        descr = item.find('div', class_='card card-body').text.partition('Профили')[2].replace('Cайт мероприятия',
+                                                                                               '').strip() if item.find(
+            'div', class_='card card-body').find('h4') else '-'
+        lnk = item.find('div', class_='card-body').find('a').get('href') if item.find('div', class_='card-body').find(
+            'a') else '-'
         contests.append(
             {
                 'title': item.find('div', class_='col-8').get_text(),
@@ -45,65 +52,85 @@ def get_content(html):
         )
     return contests
 
-def filtrate(list, path,  find:str):
+
+def filtrate(lst, path, find: str):
     if path == 'all':
         items = []
-        for item in list:
+        for item in lst:
             for value in item.values():
-                if  find.lower() in value.lower() or find.lower().capitalize() in value:
+                if find.lower() in value.lower() or find.lower().capitalize() in value:
                     items.append(item)
                     break
         return items
     elif path == 'title' or path == 'theme' or path == 'organizator' or path == 'description' or path == 'link':
         items = []
-        for item in list:
-         if find in item[path]:
+        for item in lst:
+            if find in item[path]:
                 items.append(item)
         return items
     else:
-        return [{'title': 'Ошибка \'path\'', 'theme': 'Ошибка \'path\'', 'organizator': 'Ошибка \'path\'', 'description': 'Ошибка \'path\'', 'link': 'Ошибка \'path\''}]
+        return [{
+            'title': 'Ошибка \'path\'',
+            'theme': 'Ошибка \'path\'',
+            'organizator': 'Ошибка \'path\'',
+            'description': 'Ошибка \'path\'',
+            'link': 'Ошибка \'path\''
+        }]
+
 
 def save_doc(items, path):
-    with open(path,'w', encoding="utf-8") as file:
+    with open(path, 'w', encoding="utf-8") as file:
         writer = csv.writer(file, delimiter=';')
         writer.writerow(['Название', 'Тема', 'Организатор', 'Описание', 'Ссылка'])
         for item in items:
-            writer.writerow([item['title'], item['theme'], item['organizator'], item['description'], item['link']])
+            writer.writerow([
+                item['title'],
+                item['theme'],
+                item['organizator'],
+                item['description'],
+                item['link']
+            ])
 
-def findword(word: str, d: dict):
+
+def findword(word: str, d: dict[str, list[str]]):
     for key, value in d.items():
         if word in value:
             print('Успешно')
             return key
 
-def outprint(URL):
-    html = get_html(URL)
+
+def outprint(url):
+    html = get_html(url)
     c = get_content(html)
     way = findword(input('Способ вывода (файл/терминал) >>>'), sl)
     filtrated = filtrate(c, findword(input('Раздел >>>').lower(), sl), input('Поиск >>>'))
     if way == 'terminal':
-        outwhat = findword(input('Вывод раздела >>>').lower(), sl)
+        outwhat = str(findword(input('Вывод раздела >>>').lower(), sl))
         if outwhat == 'all':
             for i in filtrated:
-                print(i['title'], '\n', i['theme'], '\n', i['organizator'], '\n', i['description'], '\n', i['link'], '\n')
+                print(i['title'], '\n', i['theme'], '\n', i['organizator'], '\n', i['description'], '\n', i['link'],
+                      '\n')
         else:
             for i in filtrated:
                 print(i[outwhat])
     elif way == 'file':
-        with open("C:\\Users\\Ученик\\Desktop\\Рабочая папка\\Python_logs\\activities.txt", 'w+', encoding='utf-8') as activities:
+        with open("C:\\Users\\Ученик\\Desktop\\Рабочая папка\\Python_logs\\activities.txt", 'w+',
+                  encoding='utf-8') as activities:
             for i in filtrated:
-                print(i['title'], '\n', i['theme'], '\n', i['organizator'], '\n', i['description'], '\n', i['link'], '\n\n', file=activities)
+                print(i['title'], '\n', i['theme'], '\n', i['organizator'], '\n', i['description'], '\n', i['link'],
+                      '\n\n', file=activities)
 
-def outPrintProgram(URL, path, find, outPath):
-    html = get_html(URL)
+
+def out_print_program(url, path, find, out_path):
+    html = get_html(url)
     c = get_content(html)
     filtrated = filtrate(c, path, find)
-    outwhat = outPath
+    outwhat = out_path
     string = ''
     if outwhat == 'all':
         for i in filtrated:
             string = string + i['title']
-            string = string +'\n'
+            string = string + '\n'
             string = string + i['theme']
             string = string + '\n'
             string = string + i['organizator']
@@ -118,8 +145,10 @@ def outPrintProgram(URL, path, find, outPath):
             string = string + '\n'
     with open("activities.txt", 'w+', encoding='utf-8') as activities:
         for i in filtrated:
-            print(i['title'], '\n', i['theme'], '\n', i['organizator'], '\n', i['description'], '\n', i['link'], '\n\n', file=activities)
+            print(i['title'], '\n', i['theme'], '\n', i['organizator'], '\n', i['description'], '\n', i['link'], '\n\n',
+                  file=activities)
     return string
+
 
 class Ui_FindKonkurs(object):
     def setupUi(self, FindKonkurs):
@@ -248,11 +277,9 @@ class Ui_FindKonkurs(object):
     txt = ''
 
     def activate_button(self):
-        self.txt = outPrintProgram(self.url, self.pathin, self.find, self.outpath)
+        self.txt = out_print_program(self.url, self.pathin, self.find, self.outpath)
         print('Текст настроен')
         self.textFormating()
-
-        
 
     def FindInFunc(self):
         print('Кнопка кликнута')
@@ -299,17 +326,20 @@ class Ui_FindKonkurs(object):
         self.OutputText.setText(self.txt)
         print('Текст выведен')
 
+
 class InputFrame(QtWidgets.QMainWindow, Ui_FindKonkurs):
     def __init__(self):
         super().__init__()
         self.setupUi(self)  # Это нужно для инициализации нашего дизайна
-    
+
+
 def main():
     app = QtWidgets.QApplication(sys.argv)  # Новый экземпляр QApplication
     window = InputFrame()  # Создаём объект класса ExampleApp
     window.show()  # Показываем окно
     app.exec()  # и запускаем приложение
 
+
 if __name__ == '__main__':
-     # Если мы запускаем файл напрямую, а не импортируем
-    main() # то запускаем функцию main()
+    # Если мы запускаем файл напрямую, а не импортируем
+    main()  # то запускаем функцию main()
